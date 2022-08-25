@@ -1,0 +1,11 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+
+.vscode
+
+dataset/cue-conflict/
+dataset/imagenet/
+dataset/textures/
+
+
+
