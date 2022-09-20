@@ -1,4 +1,4 @@
-from benchmarks import TwoFactor_NeuronalDimensionality
+from benchmarks import TwoFactor_NeuronalDimensionality, ShapeBiasBenchmark
 from torchvision.models import *
 from torchvision.models.feature_extraction import get_graph_node_names
 import torch
@@ -24,9 +24,15 @@ except:
     image_size = 513
 
 
+
+
+benchmark = ShapeBiasBenchmark(100,4)
+print(benchmark(model))
+print("\n\n\n")
+
 dataloader = DataLoader(Paired_StylizedVoc2012(
                             transform=cropped_imagenet_transform(image_size)),
                             batch_size=8,shuffle=True)
-
-benchmark = TwoFactor_NeuronalDimensionality(dataloader,max_batches=20)
+benchmark = TwoFactor_NeuronalDimensionality(dataloader,max_batches=5)
 benchmark(model,layers=[names[1][-1]])
+

@@ -45,7 +45,7 @@ class ShapeBiasBenchmark(Benchmark):
         label_choices = Imagenet_probabilities_to_16class_names_mapping(probabilities.cpu().numpy())
         filenames = list(map(lambda x:re.sub(".*/.*/","",x) , paths))
         data = pd.DataFrame(data={"label_choice":label_choices[:,0], "shape":shapes, "texture":textures, "filename":filenames})
-        if self.log_intermediate:
+        if self._log_intermediate:
             self._log_intermediate_calculations(logits,probabilities,filenames)
         data = data[data["shape"] != data["texture"]] #remove data without conflict
         statistics = self._calculate_statistics(data)
