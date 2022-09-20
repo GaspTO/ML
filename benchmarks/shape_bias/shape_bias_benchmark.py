@@ -4,7 +4,7 @@ import torch
 from tqdm import tqdm
 import pandas as pd
 import re
-from benchmarks import Benchmark
+from benchmarks.benchmark import Benchmark
 from datasets import cueconflict_dataloader
 from typing import Dict, Tuple
 
@@ -24,7 +24,7 @@ class ShapeBiasBenchmark(Benchmark):
         self.print_results = print_results
         self._log_intermediate = log_intermediate
 
-    def __call__(self,model) -> Tuple(Dict,Dict):
+    def __call__(self,model) -> Tuple[Dict,Dict]:
         """
         return: dictionary with some statistics
         args:
