@@ -1,6 +1,3 @@
-import sys
-sys.path.append("/home/nizzel/Desktop/Tiago/CS/Code/ML")
-
 from datasets import CueConflict ,StylizedVOC2012
 import random
 import re
