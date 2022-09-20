@@ -1,10 +1,17 @@
+from cgitb import text
 from torchvision import transforms, datasets
 import torch
+import os
 
 imagenet_transformation = transforms.Compose([
                             transforms.ToTensor(),
                             transforms.Normalize(mean=[0.485, 0.456, 0.406],std=[0.229, 0.224, 0.225])
                         ])
+
+cropped_imagenet_transform = lambda size: transforms.Compose([
+                                transforms.ToTensor(),
+                                transforms.CenterCrop(size),
+                                transforms.Normalize(mean=[0.485, 0.456, 0.406],std=[0.229, 0.224, 0.225])])
 
 """                             
 ...................................
@@ -32,12 +39,12 @@ def get_imagenet_val(transform=None):
 ...................................
 """
 
-class CueConflictDataset(datasets.ImageFolder):
+class CueConflict(datasets.ImageFolder):
     """Custom dataset that includes image file paths. Extends
     torchvision.datasets.ImageFolder"""
 
     def __init__(self, root_path="datasets/cue_conflict",transform=None):
-        super(CueConflictDataset, self).__init__(root_path,transform=transform)
+        super(CueConflict, self).__init__(root_path,transform=transform)
 
     def __getitem__(self, index):
         """override the __getitem__ method. This is the method that dataloader calls."""
@@ -56,7 +63,7 @@ class CueConflictDataset(datasets.ImageFolder):
         return sample,shape,texture,path
 
 def cueconflict_dataloader(root_path="datasets/cue_conflict", batch_size=32, num_workers=4):
-    dataset = CueConflictDataset(root_path, imagenet_transformation)
+    dataset = CueConflict(root_path, imagenet_transformation)
     loader = torch.utils.data.DataLoader(
         dataset,
         batch_size=batch_size, shuffle=False,
@@ -65,5 +72,85 @@ def cueconflict_dataloader(root_path="datasets/cue_conflict", batch_size=32, num
     return loader
 
     
+"""                             
+...................................
+............StylizedVOC2012........
+...................................
+"""
 
+class StylizedVOC2012(datasets.ImageFolder):
+    """Custom dataset that includes image file paths. Extends
+    torchvision.datasets.ImageFolder"""
 
+    def __init__(self, root_path="datasets/styized_voc2012",transform=None):
+        super(StylizedVOC2012, self).__init__(root_path,transform=transform)
+        self.textures = ["woven","cracked","marbled","pleated","potholed"]
+        self.shapes = ['person', 'pottedplant', 'boat', 'sofa', 'bicycle', 'horse',
+                       'chair', 'tvmonitor', 'bottle', 'dog', 'motorbike', 'bird',
+                       'train', 'car', 'diningtable', 'cat', 'aeroplane', 'sheep', 'bus', 'cow']
+        self._texture_map, self._shape_map, self._texture_shape_map, self._shape_texture_map = None,None,None,None
+
+    def __getitem__(self, index):
+        """override the __getitem__ method. This is the method that dataloader calls."""
+        sample, _ = super().__getitem__(index)
+
+        path = self.imgs[index][0]
+        filename, texture, shape = self.break_path(path)
+        
+        assert shape in self.shapes
+        assert texture in self.textures
+        
+        return sample, shape, texture, path
+
+    def break_path(self,path):
+        filename = path.split("/")[-1][:-4]
+        texture, shape = filename.split("_")[0:2]
+        return filename, texture, shape
+    
+    def _set_texture_shape_maps(self):
+        self._texture_map, self._shape_map, self._texture_shape_map, self._shape_texture_map = {}, {}, {}, {}
+        for texture in self.textures:
+            self._texture_map[texture] = []
+            self._texture_shape_map[texture] = {}
+        for shape in self.shapes:
+            self._shape_map[shape] = []
+            self._shape_texture_map[shape] = {} 
+        for texture in self.textures:
+            for shape in self.shapes:
+                self._shape_texture_map[shape][texture] = []
+                self._texture_shape_map[texture][shape] = []
+                
+        for path, _ in self.imgs:
+            _, texture, shape = self.break_path(path)
+            self._texture_map[texture].append(path)
+            self._shape_map[shape].append(path)
+            self._texture_shape_map[texture][shape].append(path)
+            self._shape_texture_map[shape][texture].append(path)
+        
+    @property
+    def texture_map(self):
+        if self._texture_map is None:
+            self._set_texture_shape_maps()
+        return self._texture_map
+    
+    @property
+    def shape_map(self):
+        if self._shape_map is None:
+            self._set_texture_shape_maps()
+        return self._shape_map
+ 
+    @property
+    def texture_shape_map(self):
+        if self._texture_shape_map is None:
+            self._set_texture_shape_maps()
+        return self._texture_shape_map
+            
+    @property
+    def shape_texture_map(self):
+        if self._shape_texture_map is None:
+            self._set_texture_shape_maps()
+        return self._shape_texture_map
+    
+    
+        
+            

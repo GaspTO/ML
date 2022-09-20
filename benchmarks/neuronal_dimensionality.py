@@ -229,7 +229,6 @@ class TwoFactor_NeuronalDimensionality(LayeredBenchmark):
         return scores
         
      
-     
     def _softmax_dim(self,scores,N):
         m = np.max(scores)
         e = np.exp(scores-m)
