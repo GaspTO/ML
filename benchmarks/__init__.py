@@ -1,30 +1,10 @@
 from typing import Dict, Tuple
+from benchmarks.benchmark import Benchmark
 from torch.utils.data import DataLoader, random_split
 import torch
 from tqdm import tqdm
 import math
-from benchmarks.shape_bias.shape_bias_benchmark import ShapeBiasBenchmark
-from datasets import cueconflict_dataloader
 
-class Benchmark:
-    """A benchmark is ran for each model and returns a tuple with two
-    dictionaries. The first returns the benchmark data, the second returns meta-data.
-    """
-    def __init__(self,name):
-        self.name = name
-        
-    def __call__(self,model) -> Tuple(Dict,Dict):
-        raise NotImplementedError
-    
-class LayeredBenchmark(Benchmark):
-    """A Layered benchmark is a benchmark but runs for some layers of a model
-    """
-    def __init__(self,name):
-        super().__init__(name)
-        
-    def __call__(self,model,layers:Dict=None) -> Tuple(Dict,Dict):
-        raise NotImplementedError
-        
 class Accuracy(Benchmark):
     def __init__(self,name,dataset,batch_size,k=(1,5)):
         super().__init__(name)
@@ -32,7 +12,7 @@ class Accuracy(Benchmark):
         self.dataset = dataset
         self.batch_size = batch_size
         
-    def __call__(self,model) -> Tuple(Dict,Dict):
+    def __call__(self,model) -> Tuple[Dict,Dict]:
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         dataloader = DataLoader(self.dataset,batch_size=self.batch_size,shuffle=True)
         results = [0] * len(self.k)
@@ -57,4 +37,5 @@ class Accuracy(Benchmark):
         return num_correct
     
 
-from benchmarks.shape_bias import ShapeBiasBenchmark
+from benchmarks.shape_bias.shape_bias_benchmark import ShapeBiasBenchmark
+from benchmarks.neuronal_dimensionality import TwoFactor_NeuronalDimensionality
