@@ -24,11 +24,19 @@ class TwoFactor_NeuronalDimensionality(LayeredBenchmark):
     def __call__(self,model,layers=None)-> Tuple[Dict,Dict]:
         output_dict, factor_list = self.output_dicts(model,layers,15)
         #dims, dims_percent = self.dim_est(output_dict, factor_list)
+        """
         print(self.dim_est_3(output_dict, factor_list))
         print(self.dim_est_2(output_dict, factor_list))
         print(self.dim_est_1(output_dict, factor_list))
         print(self.dim_est_0_softmax(output_dict, factor_list))
         print(self.dim_est_0_normalize(output_dict, factor_list))
+        """
+        dim3 = self.dim_est_3(output_dict, factor_list)
+        dim2 = self.dim_est_2(output_dict, factor_list)
+        dim1 = self.dim_est_1(output_dict, factor_list)
+        dim0_softmax = self.dim_est_0_softmax(output_dict, factor_list)
+        dim0_normalize = self.dim_est_0_normalize(output_dict, factor_list)
+        return dim3, dim2, dim1, dim0_softmax, dim0_normalize
         #return dims, dims_percent
            
     def output_dicts(self,model,layers,max=None):
