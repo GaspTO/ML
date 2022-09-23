@@ -24,20 +24,22 @@ class TwoFactor_NeuronalDimensionality(LayeredBenchmark):
     def __call__(self,model,layers=None)-> Tuple[Dict,Dict]:
         output_dict, factor_list = self.output_dicts(model,layers,15)
         #dims, dims_percent = self.dim_est(output_dict, factor_list)
-        """
-        print(self.dim_est_3(output_dict, factor_list))
-        print(self.dim_est_2(output_dict, factor_list))
-        print(self.dim_est_1(output_dict, factor_list))
-        print(self.dim_est_0_softmax(output_dict, factor_list))
-        print(self.dim_est_0_normalize(output_dict, factor_list))
-        """
-        dim3 = self.dim_est_3(output_dict, factor_list)
-        dim2 = self.dim_est_2(output_dict, factor_list)
-        dim1 = self.dim_est_1(output_dict, factor_list)
-        dim0_softmax = self.dim_est_0_softmax(output_dict, factor_list)
-        dim0_normalize = self.dim_est_0_normalize(output_dict, factor_list)
-        return dim3, dim2, dim1, dim0_softmax, dim0_normalize
-        #return dims, dims_percent
+        dim4, dim4_perc, score4 = self.dim_est_4(output_dict, factor_list)
+        dim3, dim3_perc, score3 = self.dim_est_3(output_dict, factor_list)
+        dim2, dim2_perc, score2 = self.dim_est_2(output_dict, factor_list)
+        dim1, dim1_perc, score1 = self.dim_est_1(output_dict, factor_list)
+        dim0, dim0_perc, score0 = self.dim_est_0(output_dict, factor_list)
+        return {"dim4_shape":dim4_perc[0], "dim4_texture":dim4_perc[1], "dim4_residual":dim4_perc[2],
+                "dim3_shape":dim3_perc[0], "dim3_texture":dim3_perc[1], "dim3_residual":dim3_perc[2],
+                "dim2_shape":dim2_perc[0], "dim2_texture":dim2_perc[1], "dim2_residual":dim2_perc[2],
+                "dim1_shape":dim1_perc[0], "dim1_texture":dim1_perc[1], "dim1_residual":dim1_perc[2],
+                "dim0_shape":dim0_perc[0], "dim0_texture":dim0_perc[1], "dim0_residual":dim0_perc[2],
+                "score4_shape":score4[0], "score4_texture":score4[1], "score4_residual":score4[2],
+                "score3_shape":score3[0], "score3_texture":score3[1], "score3_residual":score3[2],
+                "score2_shape":score2[0], "score2_texture":score2[1], "score2_residual":score2[2],
+                "score1_shape":score1[0], "score1_texture":score1[1], "score1_residual":score1[2],
+                "score0_shape":score0[0], "score0_texture":score0[1], "score0_residual":score0[2],
+                "N":output_dict['example1'].shape[1]}
            
     def output_dicts(self,model,layers,max=None):
         factor_list, output_dict = [], {'example1': [],'example2': []}
@@ -56,7 +58,7 @@ class TwoFactor_NeuronalDimensionality(LayeredBenchmark):
             
         return output_dict, np.concatenate(factor_list)
     
-    def dim_est_3(self,output_dict, factors):
+    def dim_est_4(self,output_dict, factors):
         ''' correct one '''
         residual_index = len(self.factors) - 1
         za = output_dict['example1']
@@ -68,11 +70,9 @@ class TwoFactor_NeuronalDimensionality(LayeredBenchmark):
         cov_by_factor = dict()
         score_by_factor = dict() #! the original code
         raw_score_by_factor = dict()
-        individual_scores = dict()
 
         zall = np.concatenate([za,zb], 0)
         mean = np.mean(zall, 0, keepdims=True)
-
         var = np.sum(np.mean((zall-mean)*(zall-mean), 0)) #! np.sum(variance of each logit)
         for f in range(len(self.factors)):
             if f != residual_index:
@@ -85,8 +85,6 @@ class TwoFactor_NeuronalDimensionality(LayeredBenchmark):
                 raw_score_by_factor[f] = np.sum(cov_by_factor[f])
                 score_by_factor[f] = raw_score_by_factor[f]/var # variance ratio
                 
-                idv = np.mean((za_by_factor[f]-mean_by_factor[f])*(zb_by_factor[f]-mean_by_factor[f]), 0)/var
-                individual_scores[f] = idv
             else:
                 score_by_factor[f] = 1.0
 
@@ -94,9 +92,9 @@ class TwoFactor_NeuronalDimensionality(LayeredBenchmark):
 
         # SOFTMAX
         dims, dims_percent = self._softmax_dim(scores,za.shape[1]) 
-        return dims, dims_percent
+        return dims, dims_percent, scores
     
-    def dim_est_2(self,output_dict, factors):
+    def dim_est_3(self,output_dict, factors):
         residual_index = len(self.factors) - 1
         za = output_dict['example1']
         zb = output_dict['example2']
@@ -107,14 +105,9 @@ class TwoFactor_NeuronalDimensionality(LayeredBenchmark):
         var_b_by_factor = dict()
         mean_by_factor = dict()
         cov_by_factor = dict()
-        individual_scores = dict()
         score_by_factor = dict() 
         raw_score_by_factor = dict() 
         
-        zall = np.concatenate([za,zb], 0)
-        mean = np.mean(zall, 0, keepdims=True)
-
-        var = np.sum(np.mean((zall-mean)*(zall-mean), 0)) #! np.sum(variance of each logit)
         for f in range(len(self.factors)):
             if f != residual_index:
                 indices = np.where(factors==f)[0]
@@ -127,9 +120,7 @@ class TwoFactor_NeuronalDimensionality(LayeredBenchmark):
                 
                 raw_score_by_factor[f] = np.nansum(cov_by_factor[f]/np.sqrt(var_a_by_factor[f]*var_b_by_factor[f])) #!
                 score_by_factor[f] = raw_score_by_factor[f]  / za.shape[-1]
-                
-                idv = np.mean((za_by_factor[f]-mean_by_factor[f])*(zb_by_factor[f]-mean_by_factor[f]), 0)/var
-                individual_scores[f] = idv
+ 
             else:
                 score_by_factor[f] = 1.0
 
@@ -137,9 +128,9 @@ class TwoFactor_NeuronalDimensionality(LayeredBenchmark):
 
         # SOFTMAX
         dims, dims_percent = self._softmax_dim(scores,za.shape[1])      
-        return dims, dims_percent
+        return dims, dims_percent, scores
         
-    def dim_est_1(self,output_dict, factors):
+    def dim_est_2(self,output_dict, factors):
         residual_index = len(self.factors) - 1
         za = output_dict['example1']
         zb = output_dict['example2']
@@ -151,14 +142,9 @@ class TwoFactor_NeuronalDimensionality(LayeredBenchmark):
         mean_a_by_factor = dict()
         mean_b_by_factor = dict()
         cov_by_factor = dict()
-        individual_scores = dict()
         score_by_factor = dict() 
         raw_score_by_factor = dict()
         
-        zall = np.concatenate([za,zb], 0)
-        mean = np.mean(zall, 0, keepdims=True)
-
-        var = np.sum(np.mean((zall-mean)*(zall-mean), 0)) #! np.sum(variance of each logit)
         for f in range(len(self.factors)):
             if f != residual_index:
                 indices = np.where(factors==f)[0]
@@ -173,28 +159,26 @@ class TwoFactor_NeuronalDimensionality(LayeredBenchmark):
                 raw_score_by_factor[f] = np.nansum(cov_by_factor[f]/np.sqrt(var_a_by_factor[f]*var_b_by_factor[f])) #!
                 score_by_factor[f] = raw_score_by_factor[f]  / za.shape[-1]
                 
-                idv = np.mean((za_by_factor[f]-mean_a_by_factor[f])*(zb_by_factor[f]-mean_b_by_factor[f]), 0)/var
-                individual_scores[f] = idv
             else:
                 score_by_factor[f] = 1.0
                 
         scores = np.array([score_by_factor[f] for f in range(len(self.factors))])
         # SOFTMAX
         dims, dims_percent = self._softmax_dim(scores,za.shape[1])    
-        return dims, dims_percent
+        return dims, dims_percent, scores
  
                 
-    def dim_est_0_softmax(self,output_dict, factors):
-        scores = self.dim_est_0_abstract(output_dict,factors)
+    def dim_est_1(self,output_dict, factors):
+        scores = self.dim_est_0_1_abstract(output_dict,factors)
         dims, dims_percent = self._softmax_dim(scores,output_dict['example1'].shape[1])
-        return dims, dims_percent    
+        return dims, dims_percent, scores    
     
-    def dim_est_0_normalize(self,output_dict, factors):
-        scores = self.dim_est_0_abstract(output_dict,factors)
+    def dim_est_0(self,output_dict, factors):
+        scores = self.dim_est_0_1_abstract(output_dict,factors)
         dims, dims_percent = self._normalize_dim(scores,output_dict['example1'].shape[1])
-        return dims, dims_percent  
+        return dims, dims_percent, scores
     
-    def dim_est_0_abstract(self,output_dict, factors):
+    def dim_est_0_1_abstract(self,output_dict, factors):
         residual_index = len(self.factors) - 1
         za = output_dict['example1']
         zb = output_dict['example2']
@@ -206,14 +190,9 @@ class TwoFactor_NeuronalDimensionality(LayeredBenchmark):
         mean_a_by_factor = dict()
         mean_b_by_factor = dict()
         cov_by_factor = dict()
-        individual_scores = dict()
         score_by_factor = dict() 
         raw_score_by_factor = dict()
         
-        zall = np.concatenate([za,zb], 0)
-        mean = np.mean(zall, 0, keepdims=True)
-
-        var = np.sum(np.mean((zall-mean)*(zall-mean), 0)) #! np.sum(variance of each logit)
         for f in range(len(self.factors)):
             if f != residual_index:
                 indices = np.where(factors==f)[0]
@@ -228,8 +207,6 @@ class TwoFactor_NeuronalDimensionality(LayeredBenchmark):
                 raw_score_by_factor[f] = np.nansum(np.abs(cov_by_factor[f]/np.sqrt(var_a_by_factor[f]*var_b_by_factor[f]))) #!
                 score_by_factor[f] = raw_score_by_factor[f]  / za.shape[-1]
                 
-                idv = np.mean((za_by_factor[f]-mean_a_by_factor[f])*(zb_by_factor[f]-mean_b_by_factor[f]), 0)/var
-                individual_scores[f] = idv
             else:
                 score_by_factor[f] = 1.0
         
